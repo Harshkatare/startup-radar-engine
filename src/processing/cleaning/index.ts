@@ -1,0 +1,6 @@
+export { CleaningPipeline } from './cleaning-pipeline'
+export { SimpleDuplicateDetector } from './detection/simple-duplicate-detector'
+export { WhitespaceCleaner } from './cleaners/whitespace-cleaner'
+export { UrlNormalizer } from './cleaners/url-normalizer'
+export { MetadataCleaner } from './cleaners/metadata-cleaner'
+export { DuplicateCleaner } from './cleaners/duplicate-cleaner'

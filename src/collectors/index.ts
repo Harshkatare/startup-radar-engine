@@ -1,0 +1,5 @@
+export { BaseCollector } from './base/base-collector'
+export { GitHubCollector } from './github/github-collector'
+export { RedditCollector } from './reddit/reddit-collector'
+export { HackerNewsCollector } from './hackernews/hackernews-collector'
+export { CollectorPipeline } from './collector-pipeline'
