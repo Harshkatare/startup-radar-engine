@@ -67,9 +67,15 @@ export class SQLiteStorage implements EventRepository, Persister {
         )
       }
 
-      this.saveClassificationSync('__global__', context.classification)
-      this.saveAggregationSync(context.aggregation)
-      this.saveScoreSync(context.score)
+      this.client.execute(
+        `INSERT OR IGNORE INTO events (id, source, external_id, title, content, metadata, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ['__global__', 'system', '__global__', 'Global Classification', '', '{}', new Date().toISOString()],
+      )
+
+      this.saveClassification('__global__', context.classification)
+      this.saveAggregation(context.aggregation)
+      this.saveScore(context.score)
     })
   }
 
@@ -126,25 +132,7 @@ export class SQLiteStorage implements EventRepository, Persister {
     this.client.execute('DELETE FROM events')
   }
 
-  async saveClassification(eventId: string, classification: ClassificationResult): Promise<void> {
-    this.client.transaction(() => {
-      this.saveClassificationSync(eventId, classification)
-    })
-  }
-
-  async saveAggregation(aggregation: AggregationResult): Promise<void> {
-    this.client.transaction(() => {
-      this.saveAggregationSync(aggregation)
-    })
-  }
-
-  async saveScore(score: ScoreResult): Promise<void> {
-    this.client.transaction(() => {
-      this.saveScoreSync(score)
-    })
-  }
-
-  private saveClassificationSync(eventId: string, classification: ClassificationResult): void {
+  saveClassification(eventId: string, classification: ClassificationResult): void {
     this.client.execute('DELETE FROM categories WHERE event_id = ?', [eventId])
     for (const cat of classification.categories) {
       this.client.execute('INSERT INTO categories (event_id, category) VALUES (?, ?)', [eventId, cat])
@@ -161,7 +149,7 @@ export class SQLiteStorage implements EventRepository, Persister {
     }
   }
 
-  private saveAggregationSync(aggregation: AggregationResult): void {
+  saveAggregation(aggregation: AggregationResult): void {
     this.client.execute(
       `INSERT OR REPLACE INTO processing_results (id, type, data, created_at)
        VALUES ('aggregation', 'aggregation', ?, ?)`,
@@ -169,7 +157,7 @@ export class SQLiteStorage implements EventRepository, Persister {
     )
   }
 
-  private saveScoreSync(score: ScoreResult): void {
+  saveScore(score: ScoreResult): void {
     this.client.execute(
       `INSERT OR REPLACE INTO processing_results (id, type, data, created_at)
        VALUES ('score', 'score', ?, ?)`,

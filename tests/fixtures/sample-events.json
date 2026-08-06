@@ -1,0 +1,74 @@
+[
+  {
+    "id": "evt-001",
+    "source": "github",
+    "externalId": "repo-123",
+    "title": "New AI-powered code assistant launched",
+    "content": "A new open source AI coding assistant using large language models has been released on GitHub. It supports multiple programming languages and integrates with popular IDEs.",
+    "metadata": { "stars": 1500, "language": "Python" },
+    "createdAt": "2026-07-28T10:00:00.000Z"
+  },
+  {
+    "id": "evt-002",
+    "source": "reddit",
+    "externalId": "post-456",
+    "title": "Show HN: I built a quantum computing simulator in Rust",
+    "content": "After months of work, I'm releasing my quantum computing simulator written in Rust. It can simulate up to 30 qubits on consumer hardware.",
+    "metadata": { "upvotes": 342, "subreddit": "rust" },
+    "createdAt": "2026-07-28T12:00:00.000Z"
+  },
+  {
+    "id": "evt-003",
+    "source": "hackernews",
+    "externalId": "story-789",
+    "title": "Blockchain-based supply chain platform raises $50M",
+    "content": "A startup building a blockchain platform for supply chain transparency has raised $50 million in Series B funding. The platform uses smart contracts to automate verification.",
+    "metadata": { "points": 245, "comments": 89 },
+    "createdAt": "2026-07-27T08:00:00.000Z"
+  },
+  {
+    "id": "evt-004",
+    "source": "github",
+    "externalId": "repo-456",
+    "title": "Machine learning framework for drug discovery",
+    "content": "A new machine learning framework designed specifically for drug discovery and molecular modeling. Features include graph neural networks and molecular dynamics simulation.",
+    "metadata": { "stars": 890, "language": "Python" },
+    "createdAt": "2026-07-27T14:00:00.000Z"
+  },
+  {
+    "id": "evt-005",
+    "source": "reddit",
+    "externalId": "post-789",
+    "title": "Edge computing IoT platform hits 1M devices",
+    "content": "An edge computing platform for IoT devices has reached 1 million connected devices. The platform provides real-time analytics and device management at the edge.",
+    "metadata": { "upvotes": 567, "subreddit": "iot" },
+    "createdAt": "2026-07-26T09:00:00.000Z"
+  },
+  {
+    "id": "evt-006",
+    "source": "hackernews",
+    "externalId": "story-012",
+    "title": "Cybersecurity startup detects zero-day vulnerabilities with ML",
+    "content": "A cybersecurity startup has developed a machine learning system that can detect zero-day vulnerabilities by analyzing code patterns and network behavior anomalies.",
+    "metadata": { "points": 678, "comments": 120 },
+    "createdAt": "2026-07-26T16:00:00.000Z"
+  },
+  {
+    "id": "evt-007",
+    "source": "github",
+    "externalId": "repo-789",
+    "title": "Serverless framework for cloud-native applications",
+    "content": "A lightweight serverless framework for building and deploying cloud-native applications across AWS, Azure, and GCP. Supports TypeScript and Go runtimes.",
+    "metadata": { "stars": 2100, "language": "TypeScript" },
+    "createdAt": "2026-07-25T11:00:00.000Z"
+  },
+  {
+    "id": "evt-008",
+    "source": "reddit",
+    "externalId": "post-012",
+    "title": "Fintech app using AI for personal finance management",
+    "content": "A new fintech application uses artificial intelligence to help users manage personal finances, track spending patterns, and provide investment recommendations.",
+    "metadata": { "upvotes": 234, "subreddit": "fintech" },
+    "createdAt": "2026-07-25T15:00:00.000Z"
+  }
+]
