@@ -1,10 +1,19 @@
 import type { Event } from '../types'
 
+export type SortBy = 'publishedAt' | 'createdAt'
+export type SortOrder = 'asc' | 'desc'
+
 export interface StartupQuery {
   source?: string
   categories?: string[]
   technologies?: string[]
   keywords?: string[]
+  minScore?: number
+  maxScore?: number
+  fromDate?: Date
+  toDate?: Date
+  sortBy?: SortBy
+  sortOrder?: SortOrder
   limit?: number
   offset?: number
 }
@@ -14,6 +23,8 @@ export interface QueryResult<T> {
   total: number
   limit: number
   offset: number
+  hasNext: boolean
+  hasPrevious: boolean
 }
 
 export interface QueryService {

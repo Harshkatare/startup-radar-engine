@@ -1,6 +1,13 @@
 import type { Event } from '../types'
-import type { StartupQuery, QueryResult, QueryService } from '../interfaces/query-service'
+import type { StartupQuery, QueryResult, QueryService, SortBy, SortOrder } from '../interfaces/query-service'
 import { SQLiteClient } from '../storage/sqlite/sqlite-client'
+
+const SORT_COLUMNS: Record<string, string> = {
+  createdAt: 'e.created_at',
+  publishedAt: 'e.created_at',
+}
+
+const VALID_SORT_FIELDS = new Set(['createdAt', 'publishedAt'])
 
 interface EventRow {
   id: string
@@ -26,11 +33,12 @@ export class SQLiteQueryService implements QueryService {
 
     const { clauses, params } = buildWhereClauses(query)
     const joins = buildJoins(query)
+    const ordering = buildOrderBy(query.sortBy, query.sortOrder)
 
     const countSql = `SELECT COUNT(DISTINCT e.id) AS total FROM events e${joins}${clauses}`
     const countRow = this.client.queryOne<{ total: number }>(countSql, params)
 
-    const dataSql = `SELECT DISTINCT e.id, e.source, e.external_id, e.title, e.content, e.metadata, e.created_at FROM events e${joins}${clauses} ORDER BY e.created_at DESC LIMIT ? OFFSET ?`
+    const dataSql = `SELECT DISTINCT e.id, e.source, e.external_id, e.title, e.content, e.metadata, e.created_at FROM events e${joins}${clauses}${ordering} LIMIT ? OFFSET ?`
     const rows = this.client.query<EventRow>(dataSql, [...params, limit, offset])
 
     return {
@@ -38,6 +46,8 @@ export class SQLiteQueryService implements QueryService {
       total: countRow?.total ?? 0,
       limit,
       offset,
+      hasNext: countRow !== undefined && countRow.total > offset + limit,
+      hasPrevious: offset > 0,
     }
   }
 }
@@ -85,10 +95,31 @@ function buildWhereClauses(query: StartupQuery): { clauses: string; params: unkn
     params.push(...query.keywords)
   }
 
+  if (query.fromDate) {
+    conditions.push('e.created_at >= ?')
+    params.push(query.fromDate.toISOString())
+  }
+
+  if (query.toDate) {
+    conditions.push('e.created_at <= ?')
+    params.push(query.toDate.toISOString())
+  }
+
   return {
     clauses: conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '',
     params,
   }
+}
+
+function buildOrderBy(sortBy?: SortBy, sortOrder?: SortOrder): string {
+  if (!sortBy || !VALID_SORT_FIELDS.has(sortBy)) {
+    return ' ORDER BY e.created_at DESC'
+  }
+
+  const column = SORT_COLUMNS[sortBy]
+  const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
+
+  return ` ORDER BY ${column} ${order}`
 }
 
 function mapEventRow(row: EventRow): Event {
