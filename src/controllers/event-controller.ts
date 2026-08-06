@@ -31,18 +31,6 @@ export class EventController {
         return
       }
 
-      const minScore = req.query.minScore ? parseInt(req.query.minScore as string, 10) : undefined
-      const maxScore = req.query.maxScore ? parseInt(req.query.maxScore as string, 10) : undefined
-
-      if (minScore !== undefined && isNaN(minScore)) {
-        res.status(400).json({ error: 'Invalid minScore' })
-        return
-      }
-      if (maxScore !== undefined && isNaN(maxScore)) {
-        res.status(400).json({ error: 'Invalid maxScore' })
-        return
-      }
-
       const fromDate = req.query.fromDate ? new Date(req.query.fromDate as string) : undefined
       const toDate = req.query.toDate ? new Date(req.query.toDate as string) : undefined
 
@@ -60,8 +48,6 @@ export class EventController {
         categories: toArray(req.query.category, true),
         technologies: toArray(req.query.technology, true),
         keywords: toArray(req.query.keyword, true),
-        minScore,
-        maxScore,
         fromDate,
         toDate,
         sortBy: sortBy as SortBy | undefined,

@@ -8,8 +8,6 @@ export interface StartupQuery {
   categories?: string[]
   technologies?: string[]
   keywords?: string[]
-  minScore?: number
-  maxScore?: number
   fromDate?: Date
   toDate?: Date
   sortBy?: SortBy
