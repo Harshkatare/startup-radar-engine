@@ -2,20 +2,22 @@
 
 An AI-powered technology intelligence platform that helps developers, technical founders, and product teams discover emerging AI startups, developer tools, and technology trends before they become mainstream.
 
-*Currently in early development — this version adds dashboard endpoints and an enhanced query layer with sorting, date-range filtering and pagination metadata. AI/ML features are future roadmap.*
+*Currently in early development — this version adds a processing scheduler with a run lock and a full test suite (integration, API and end-to-end). AI/ML features are future roadmap.*
 
 ---
 
-Dashboard endpoints over the persisted data plus a richer query layer — sorting, date-range filtering and pagination metadata — with a dedicated composition root wiring all services and controllers.
+A processing scheduler with a concurrency lock, plus 71 tests across three suites validating the whole pipeline — processing, querying, dashboard and the API.
 
 ### What's included
 
-- **Dashboard endpoints** — `GET /dashboard/summary` (totals + average score), `GET /dashboard/categories`, `GET /dashboard/technologies`, `GET /dashboard/top-startups?limit=`; `DashboardService` reads SQLite directly with parameterized SQL, no mutation
-- **Enhanced query layer** — sorting (`sortBy` publishedAt/createdAt, `sortOrder` asc/desc via column whitelist), date-range filtering (`fromDate`/`toDate` on created_at), pagination metadata (`hasNext`/`hasPrevious`); comma-separated array params (`categories=AI,SaaS`); full parameter validation with HTTP 400 on invalid values
-- **Composition root** — `bootstrap/dependencies.ts` (`createDependencies()`) instantiates all shared infrastructure, services and controllers; `api/app.ts` only registers routes and middleware
-- **Express API** — `GET /health`, `GET /events`, `GET /events/:id`, `POST /process`, `GET /dashboard/*`; centralized 404 + error middleware
+- **Processing scheduler** — `Scheduler` (setInterval, default 60 min, start/stop independent of Express), `SchedulerService` (executes processing, tracks `lastRun`/`lastDurationMs`/`lastStatus`, logs start/complete/fail/skip), `ProcessingLock` (prevents concurrent runs; `POST /process` returns 409 when already running)
+- **Scheduler status** — `GET /process/status` returns `{ running, lastRun, lastDurationMs, lastStatus }`
+- **Test suite (71 tests, 7 files)** — integration (processing/query/dashboard, 32 tests, in-memory SQLite), API (process/events/dashboard, 24 tests via supertest), E2E (15 tests across 5 scenarios: processing workflow, query workflow, dashboard workflow, scheduler status, failure paths); `npm test`, `npm run test:integration|api|e2e`
+- **Dashboard endpoints** — `GET /dashboard/summary`, `/dashboard/categories`, `/dashboard/technologies`, `/dashboard/top-startups?limit=`
+- **Enhanced query layer** — sorting (sortBy/sortOrder via column whitelist), date-range filtering, pagination metadata (`hasNext`/`hasPrevious`), comma-separated array params, parameter validation with HTTP 400
+- **Composition root** — `bootstrap/dependencies.ts` with injectable SQLiteClient (test support); `api/app.ts` accepts optional `Dependencies`; `server.ts` starts/stops the scheduler
+- **Express API** — `GET /health`, `GET /events`, `GET /events/:id`, `POST /process`, `GET /process/status`, `GET /dashboard/*`
 - **`ProcessingService`** — orchestrates collectors (collect → validate → normalize) + the processing pipeline (clean → classify → aggregate → score → persist)
-- **Query layer** — `QueryService` with `findEvents()`/`findById()`, `StartupQuery`, `QueryResult<T>` with pagination metadata
 - **Domain models** — `Event`, `Topic`, `ProcessedSignal`, `DailySnapshot`, enums, `DateRange`
 - **Repository contracts + in-memory implementations** — event, topic, processed-signal, daily-snapshot
 - **Collector framework** — `BaseCollector`, GitHub / Reddit / HackerNews collectors, `CollectorPipeline`
@@ -25,22 +27,22 @@ Dashboard endpoints over the persisted data plus a richer query layer — sortin
 - **Scoring pipeline** — normalized 0.0–1.0 scorers
 - **SQLite persistence** — 5-table schema, `SQLiteClient`, `SQLiteStorage` (repository + persister), single-transaction `persist()`
 - **Config module** — collector/processing/scoring constants
-- **Tooling** — `package.json`, `tsconfig.json`, TypeScript build via tsc
+- **Tooling** — `package.json`, `tsconfig.json`, vitest, supertest, better-sqlite3
 
 ### Not yet in this version
 
-- No processing scheduler or scheduled runs
+- No per-event classification — classification is global (`__global__` event + one result per run)
 - `minScore`/`maxScore` are parsed and validated but not yet applied to queries (score filtering not implemented)
 - Collectors return `[]` — no HTTP calls implemented yet
-- Classification is batch-global (one result per processing run), not per-event
 - No auth, no logging, no CLI
 
 ### Layout
 
 ```
 src/
-├── bootstrap/      composition root — createDependencies()
+├── bootstrap/      composition root — createDependencies() (injectable client)
 ├── api/            Express app factory, server entry, barrel
+├── scheduler/      ProcessingLock, SchedulerService, Scheduler
 ├── controllers/    health, event, processing, dashboard controllers
 ├── routes/         thin route modules delegating to controllers
 ├── middleware/     notFound (404), errorHandler (500)
@@ -51,6 +53,11 @@ src/
 ├── collectors/     base collector, GitHub/Reddit/HackerNews, pipeline
 ├── processing/     cleaning/, classification/, aggregation/, scoring/
 └── query/          SQLiteQueryService — sorting, date-range, pagination
+tests/
+├── fixtures/       sample-events.json
+├── integration/    processing, query, dashboard
+├── api/            process, events, dashboard
+└── e2e/            startup-radar.e2e.test.ts
 ```
 
 ### Running
@@ -59,4 +66,13 @@ src/
 npm install
 npm run build
 npm start
+```
+
+### Testing
+
+```
+npm test
+npm run test:integration
+npm run test:api
+npm run test:e2e
 ```
