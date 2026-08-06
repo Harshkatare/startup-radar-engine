@@ -15,6 +15,11 @@ interface EventRow {
 export class SQLiteQueryService implements QueryService {
   constructor(private readonly client: SQLiteClient) {}
 
+  async findById(id: string): Promise<Event | null> {
+    const row = this.client.queryOne<EventRow>('SELECT * FROM events WHERE id = ?', [id])
+    return row ? mapEventRow(row) : null
+  }
+
   async findEvents(query: StartupQuery): Promise<QueryResult<Event>> {
     const limit = query.limit ?? 50
     const offset = query.offset ?? 0

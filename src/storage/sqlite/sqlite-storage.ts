@@ -1,9 +1,7 @@
-import type {
-  Event,
-  ClassificationResult,
-  AggregationResult,
-  ScoreResult,
-} from '../../types'
+import type { Event } from '../../types'
+import type { ClassificationResult } from '../../processing/classification/classification-result'
+import type { AggregationResult } from '../../processing/aggregation/aggregation-result'
+import type { ScoreResult } from '../../processing/scoring/score-result'
 import type { EventRepository, Persister } from '../../interfaces'
 import type { ProcessingContext } from '../../processing/processing-context'
 import { SQLiteClient } from './sqlite-client'

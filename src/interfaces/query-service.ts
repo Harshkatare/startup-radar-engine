@@ -18,4 +18,5 @@ export interface QueryResult<T> {
 
 export interface QueryService {
   findEvents(query: StartupQuery): Promise<QueryResult<Event>>
+  findById(id: string): Promise<Event | null>
 }
