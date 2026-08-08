@@ -6,6 +6,7 @@ import { createProcessingStatistics } from '../processing/processing-statistics'
 import { createClassificationResult } from '../processing/classification/classification-result'
 import { createAggregationResult } from '../processing/aggregation/aggregation-result'
 import { createScoreResult } from '../processing/scoring/score-result'
+import { createTopicResult } from '../processing/topics/topic-result'
 import { EventSource } from '../types'
 
 export class ProcessingService {
@@ -25,6 +26,7 @@ export class ProcessingService {
       classification: createClassificationResult(),
       aggregation: createAggregationResult(),
       score: createScoreResult(),
+      topics: createTopicResult(),
     }
 
     return this.pipeline.run(context)

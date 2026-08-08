@@ -12,6 +12,7 @@ import { createProcessingStatistics } from '../../src/processing/processing-stat
 import { createClassificationResult } from '../../src/processing/classification/classification-result'
 import { createAggregationResult } from '../../src/processing/aggregation/aggregation-result'
 import { createScoreResult } from '../../src/processing/scoring/score-result'
+import { createTopicResult } from '../../src/processing/topics/topic-result'
 import { EventSource } from '../../src/types'
 import type { Dependencies } from '../../src/bootstrap/dependencies'
 import type { ProcessingContext } from '../../src/processing/processing-context'
@@ -57,6 +58,7 @@ describe('Events API', () => {
       classification: createClassificationResult(),
       aggregation: createAggregationResult(),
       score: createScoreResult(),
+      topics: createTopicResult(),
     }
 
     await pipeline.run(context)

@@ -4,6 +4,7 @@ import type { ProcessingStatistics } from './processing-statistics'
 import type { ClassificationResult } from './classification/classification-result'
 import type { AggregationResult } from './aggregation/aggregation-result'
 import type { ScoreResult } from './scoring/score-result'
+import type { TopicResult } from './topics/topic-result'
 
 export interface ProcessingContext {
   events: Event[]
@@ -13,4 +14,5 @@ export interface ProcessingContext {
   classification: ClassificationResult
   aggregation: AggregationResult
   score: ScoreResult
+  topics: TopicResult
 }
