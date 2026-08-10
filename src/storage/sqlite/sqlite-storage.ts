@@ -42,6 +42,20 @@ export class SQLiteStorage implements EventRepository, Persister {
         data TEXT NOT NULL,
         created_at TEXT NOT NULL
       )`,
+      `CREATE TABLE IF NOT EXISTS topics (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        score REAL NOT NULL,
+        growth_rate REAL NOT NULL,
+        confidence REAL NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS topic_evidence (
+        topic_id TEXT NOT NULL REFERENCES topics(id),
+        event_id TEXT NOT NULL REFERENCES events(id),
+        source TEXT NOT NULL,
+        PRIMARY KEY (topic_id, event_id)
+      )`,
     ]
 
     for (const sql of statements) {
@@ -118,6 +132,7 @@ export class SQLiteStorage implements EventRepository, Persister {
   }
 
   async delete(id: string): Promise<void> {
+    this.client.execute('DELETE FROM topic_evidence WHERE event_id = ?', [id])
     this.client.execute('DELETE FROM categories WHERE event_id = ?', [id])
     this.client.execute('DELETE FROM technologies WHERE event_id = ?', [id])
     this.client.execute('DELETE FROM keywords WHERE event_id = ?', [id])
@@ -125,6 +140,8 @@ export class SQLiteStorage implements EventRepository, Persister {
   }
 
   async clear(): Promise<void> {
+    this.client.execute('DELETE FROM topic_evidence')
+    this.client.execute('DELETE FROM topics')
     this.client.execute('DELETE FROM keywords')
     this.client.execute('DELETE FROM technologies')
     this.client.execute('DELETE FROM categories')

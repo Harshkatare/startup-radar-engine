@@ -6,6 +6,7 @@
     "build": "tsc",
     "start": "node dist/api/server.js",
     "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:api": "vitest run tests/api",
     "test:e2e": "vitest run tests/e2e"
