@@ -1,6 +1,7 @@
 import type { Persister } from '../interfaces'
 import type { ProcessingContext } from '../processing/processing-context'
 import type { Topic as ProcessingTopic } from '../processing/topics/topic-result'
+import type { TopicTrend } from '../processing/trends/trend-result'
 import type { Topic as PersistedTopic } from '../types'
 import type { SQLiteTopicRepository } from '../storage/sqlite/sqlite-topic-repository'
 
@@ -14,7 +15,10 @@ export class TopicPersistenceService implements Persister {
     }
 
     const now = new Date()
-    const persisted: PersistedTopic[] = topics.map((topic) => mapToPersistedTopic(topic, now))
+    const trends = context.trends.trends
+    const persisted: PersistedTopic[] = topics.map((topic) =>
+      mapToPersistedTopic(topic, trends[topic.id], now),
+    )
 
     await this.topicRepository.saveMany(persisted)
 
@@ -24,13 +28,17 @@ export class TopicPersistenceService implements Persister {
   }
 }
 
-function mapToPersistedTopic(topic: ProcessingTopic, updatedAt: Date): PersistedTopic {
+function mapToPersistedTopic(
+  topic: ProcessingTopic,
+  trend: TopicTrend | undefined,
+  updatedAt: Date,
+): PersistedTopic {
   return {
     id: topic.id,
     name: topic.name,
-    score: 0,
-    growthRate: 0,
-    confidence: 0,
+    score: trend?.score ?? 0,
+    growthRate: trend?.growthRate ?? 0,
+    confidence: trend?.confidence ?? 0,
     updatedAt,
   }
 }

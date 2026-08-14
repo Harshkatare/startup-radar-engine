@@ -11,6 +11,7 @@ import { ClassificationProcessor } from '../processing/classification-processor'
 import { AggregationProcessor } from '../processing/aggregation-processor'
 import { ScoringProcessor } from '../processing/scoring/scoring-processor'
 import { TopicBuilderProcessor } from '../processing/topic-builder-processor'
+import { TrendProcessor } from '../processing/trend-processor'
 import { GitHubCollector } from '../collectors/github/github-collector'
 import { RedditCollector } from '../collectors/reddit/reddit-collector'
 import { HackerNewsCollector } from '../collectors/hackernews/hackernews-collector'
@@ -51,6 +52,7 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
   pipeline.register(new AggregationProcessor())
   pipeline.register(new ScoringProcessor())
   pipeline.register(new TopicBuilderProcessor())
+  pipeline.register(new TrendProcessor())
 
   const processingService = new ProcessingService(
     [new GitHubCollector(), new RedditCollector(), new HackerNewsCollector()],

@@ -14,6 +14,7 @@ import { createClassificationResult } from '../../src/processing/classification/
 import { createAggregationResult } from '../../src/processing/aggregation/aggregation-result'
 import { createScoreResult } from '../../src/processing/scoring/score-result'
 import { createTopicResult } from '../../src/processing/topics/topic-result'
+import { createTrendResult } from '../../src/processing/trends/trend-result'
 import { EventSource } from '../../src/types'
 import type { Event, Topic } from '../../src/types'
 import type { Topic as ProcessingTopic } from '../../src/processing/topics/topic-result'
@@ -57,6 +58,7 @@ function makeContext(events: Event[], topics: ProcessingTopic[]): ProcessingCont
     aggregation: createAggregationResult(),
     score: createScoreResult(),
     topics: { topics },
+    trends: createTrendResult(),
   }
 }
 

@@ -12,6 +12,7 @@ import { createClassificationResult } from '../../src/processing/classification/
 import { createAggregationResult } from '../../src/processing/aggregation/aggregation-result'
 import { createScoreResult } from '../../src/processing/scoring/score-result'
 import { createTopicResult } from '../../src/processing/topics/topic-result'
+import { createTrendResult } from '../../src/processing/trends/trend-result'
 import { EventSource } from '../../src/types'
 import type { Event } from '../../src/types'
 import type { ProcessingContext } from '../../src/processing/processing-context'
@@ -57,6 +58,7 @@ describe('Dashboard Integration', () => {
       aggregation: createAggregationResult(),
       score: createScoreResult(),
       topics: createTopicResult(),
+      trends: createTrendResult(),
     }
 
     await pipeline.run(context)
