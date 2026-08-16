@@ -6,6 +6,7 @@ import { createAggregationResult } from '../../src/processing/aggregation/aggreg
 import { createScoreResult } from '../../src/processing/scoring/score-result'
 import { createTopicResult } from '../../src/processing/topics/topic-result'
 import { createTrendResult } from '../../src/processing/trends/trend-result'
+import { createRankingResult } from '../../src/processing/ranking/ranking-result'
 import { EventSource } from '../../src/types'
 import type { Event } from '../../src/types'
 import type { TopicEvidence } from '../../src/processing/topics/topic-result'
@@ -57,6 +58,7 @@ function makeContext(events: Event[], topics: ProcessingTopic[]): ProcessingCont
     score: createScoreResult(),
     topics: { topics },
     trends: createTrendResult(),
+    ranking: createRankingResult(),
   }
 }
 

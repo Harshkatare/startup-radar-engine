@@ -12,6 +12,7 @@ import { createAggregationResult } from '../../src/processing/aggregation/aggreg
 import { createScoreResult } from '../../src/processing/scoring/score-result'
 import { createTopicResult } from '../../src/processing/topics/topic-result'
 import { createTrendResult } from '../../src/processing/trends/trend-result'
+import { createRankingResult } from '../../src/processing/ranking/ranking-result'
 import { EventSource } from '../../src/types'
 import type { Event } from '../../src/types'
 import type { ProcessingContext } from '../../src/processing/processing-context'
@@ -100,6 +101,7 @@ describe('Processing Integration', () => {
       score: createScoreResult(),
       topics: createTopicResult(),
       trends: createTrendResult(),
+      ranking: createRankingResult(),
     }
 
     const result = await pipeline.run(context)
