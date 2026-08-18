@@ -5,6 +5,7 @@ import { createHealthRoutes } from '../routes/health-routes'
 import { createEventRoutes } from '../routes/event-routes'
 import { createProcessingRoutes } from '../routes/processing-routes'
 import { createDashboardRoutes } from '../routes/dashboard-routes'
+import { createTopicRoutes } from '../routes/topic-routes'
 import { errorHandler } from '../middleware/error-handler'
 import { notFound } from '../middleware/not-found'
 
@@ -19,6 +20,7 @@ export function createApp(deps?: Dependencies): express.Application {
   app.use(createEventRoutes(resolved.eventController))
   app.use(createProcessingRoutes(resolved.processingController))
   app.use(createDashboardRoutes(resolved.dashboardController))
+  app.use(createTopicRoutes(resolved.topicController))
 
   app.use(notFound)
   app.use(errorHandler)

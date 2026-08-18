@@ -2,6 +2,7 @@ import { SQLiteClient } from '../storage/sqlite/sqlite-client'
 import { SQLiteStorage } from '../storage/sqlite/sqlite-storage'
 import { SQLiteTopicRepository } from '../storage/sqlite/sqlite-topic-repository'
 import { SQLiteQueryService } from '../query/query-service'
+import { SQLiteTopicQueryService } from '../query/topic-query-service'
 import { DashboardService } from '../services/dashboard-service'
 import { ProcessingService } from '../services/processing-service'
 import { TopicPersistenceService } from '../services/topic-persistence-service'
@@ -20,6 +21,7 @@ import { HealthController } from '../controllers/health-controller'
 import { EventController } from '../controllers/event-controller'
 import { ProcessingController } from '../controllers/processing-controller'
 import { DashboardController } from '../controllers/dashboard-controller'
+import { TopicController } from '../controllers/topic-controller'
 import { ProcessingLock } from '../scheduler/processing-lock'
 import { SchedulerService } from '../scheduler/scheduler-service'
 import { Scheduler } from '../scheduler/scheduler'
@@ -32,6 +34,7 @@ export interface Dependencies {
   eventController: EventController
   processingController: ProcessingController
   dashboardController: DashboardController
+  topicController: TopicController
   scheduler: Scheduler
 }
 
@@ -43,6 +46,7 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
 
   const queryService = new SQLiteQueryService(resolved)
   const dashboardService = new DashboardService(resolved)
+  const topicQueryService = new SQLiteTopicQueryService(resolved)
 
   const pipeline = new ProcessingPipeline([
   storage,
@@ -69,6 +73,7 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
   const eventController = new EventController(queryService)
   const processingController = new ProcessingController(processingService, lock, schedulerService)
   const dashboardController = new DashboardController(dashboardService)
+  const topicController = new TopicController(topicQueryService)
 
   return {
     client: resolved,
@@ -78,6 +83,7 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
     eventController,
     processingController,
     dashboardController,
+    topicController,
     scheduler,
   }
 }
