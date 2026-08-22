@@ -13,6 +13,7 @@ export type { TopicBuilder } from './topic-builder'
 export type { TrendAnalyzer } from './trend-analyzer'
 export type { TopicRanker } from './topic-ranker'
 export type { Persister } from './persister'
+export type { AIAnalyst } from './ai-analyst'
 export type { StartupQuery, QueryResult, QueryService } from './query-service'
 export type {
   TopicQuery,
