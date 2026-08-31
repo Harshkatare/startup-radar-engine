@@ -12,6 +12,7 @@ import type { Dependencies } from '../../src/bootstrap/dependencies'
 import type { Topic } from '../../src/types'
 import type { TopicEvidence } from '../../src/interfaces/topic-query-service'
 import type { TopicQueryService } from '../../src/interfaces/topic-query-service'
+import type { AIAnalyst } from '../../src/interfaces/ai-analyst'
 
 function makeTopic(id: string, score: number, growthRate: number, confidence: number): Topic {
   return {
@@ -298,6 +299,72 @@ describe('Topics API', () => {
     })
   })
 
+  describe('GET /topics/:id/analysis', () => {
+    it('returns 200 with AnalystResult for an existing topic', async () => {
+      await seed(
+        [makeTopic('topic-1', 0.85, 0.5, 0.75)],
+        {
+          'topic-1': [
+            { eventId: 'event-1', source: EventSource.GITHUB },
+            { eventId: 'event-2', source: EventSource.REDDIT },
+          ],
+        },
+      )
+
+      const res = await request(createApp(deps)).get('/topics/topic-1/analysis')
+
+      expect(res.status).toBe(200)
+      expect(res.body.topicId).toBe('topic-1')
+      expect(typeof res.body.summary).toBe('string')
+      expect(res.body.summary).toContain('topic-1')
+      expect(typeof res.body.whyItMatters).toBe('string')
+      expect(res.body.whyItMatters.length).toBeGreaterThan(0)
+      expect(typeof res.body.evidenceSummary).toBe('string')
+      expect(res.body.evidenceSummary).toContain('2 evidence items')
+    })
+
+    it('produces deterministic repeatable results across multiple calls', async () => {
+      await seed(
+        [makeTopic('topic-repeat', 0.9, 0.2, 0.8)],
+        {
+          'topic-repeat': [{ eventId: 'event-1', source: EventSource.GITHUB }],
+        },
+      )
+
+      const res1 = await request(createApp(deps)).get('/topics/topic-repeat/analysis')
+      const res2 = await request(createApp(deps)).get('/topics/topic-repeat/analysis')
+
+      expect(res1.status).toBe(200)
+      expect(res2.status).toBe(200)
+      expect(res1.body).toEqual(res2.body)
+    })
+
+    it('returns 404 for an unknown topic', async () => {
+      const res = await request(createApp(deps)).get('/topics/unknown-topic/analysis')
+
+      expect(res.status).toBe(404)
+      expect(res.body).toEqual({ error: 'Not Found' })
+    })
+
+    it('forwards provider/service errors to the centralized error handler', async () => {
+      await seed([makeTopic('topic-err', 0.5, 0.5, 0.5)])
+
+      const failingAnalyst: AIAnalyst = {
+        analyze: vi.fn().mockRejectedValue(new Error('AI provider explosion')),
+      }
+
+      const customDeps: Dependencies = {
+        ...deps,
+        topicController: new TopicController(deps.topicController['topicQueryService'], failingAnalyst),
+      }
+
+      const res = await request(createApp(customDeps)).get('/topics/topic-err/analysis')
+
+      expect(res.status).toBe(500)
+      expect(res.body).toEqual({ error: 'Internal Server Error' })
+    })
+  })
+
   describe('delegation', () => {
     it('delegates to TopicQueryService rather than accessing storage directly', async () => {
       const findAll = vi.fn().mockResolvedValue({
@@ -311,9 +378,17 @@ describe('Topics API', () => {
       const findById = vi.fn().mockResolvedValue(null)
       const findTrending = vi.fn().mockResolvedValue([])
       const service: TopicQueryService = { findAll, findById, findTrending }
+      const stubAnalyst: AIAnalyst = {
+        analyze: vi.fn().mockResolvedValue({
+          topicId: 'stub-id',
+          summary: 'Stub summary',
+          whyItMatters: 'Stub why',
+          evidenceSummary: 'Stub evidence',
+        }),
+      }
 
       const app = express()
-      app.use(createTopicRoutes(new TopicController(service)))
+      app.use(createTopicRoutes(new TopicController(service, stubAnalyst)))
 
       await request(app).get('/topics?limit=5&offset=2&minScore=0.5')
       expect(findAll).toHaveBeenCalledWith({ limit: 5, offset: 2, minScore: 0.5 })
@@ -323,6 +398,69 @@ describe('Topics API', () => {
 
       await request(app).get('/topics/trending?limit=7')
       expect(findTrending).toHaveBeenCalledWith(7)
+    })
+
+    it('delegates analysis to AIAnalyst with explicit AnalystInput without accessing storage directly', async () => {
+      const mockDetail = {
+        id: 'topic-alpha',
+        name: 'AI / TypeScript',
+        score: 0.88,
+        growthRate: 0.45,
+        confidence: 0.92,
+        rank: null,
+        updatedAt: new Date('2026-06-15T00:00:00.000Z'),
+        evidence: [{ eventId: 'ev-1', source: EventSource.GITHUB }],
+        trend: {
+          activity: 1,
+          recentActivity: 1,
+          previousActivity: 0,
+          sourceDiversity: 1 / 3,
+          freshness: 1,
+        },
+      }
+
+      const findById = vi.fn().mockResolvedValue(mockDetail)
+      const service: TopicQueryService = {
+        findAll: vi.fn(),
+        findById,
+        findTrending: vi.fn(),
+      }
+
+      const mockResult = {
+        topicId: 'topic-alpha',
+        summary: 'Topic AI / TypeScript has score 0.88 and growth rate 0.45.',
+        whyItMatters: 'Activity level 1',
+        evidenceSummary: 'Backed by 1 evidence items',
+      }
+      const analyze = vi.fn().mockResolvedValue(mockResult)
+      const mockAnalyst: AIAnalyst = { analyze }
+
+      const app = express()
+      app.use(createTopicRoutes(new TopicController(service, mockAnalyst)))
+
+      const res = await request(app).get('/topics/topic-alpha/analysis')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual(mockResult)
+      expect(findById).toHaveBeenCalledWith('topic-alpha')
+      expect(analyze).toHaveBeenCalledWith({
+        topic: {
+          id: 'topic-alpha',
+          name: 'AI / TypeScript',
+          score: 0.88,
+          growthRate: 0.45,
+          confidence: 0.92,
+        },
+        rank: null,
+        evidence: [{ eventId: 'ev-1', source: EventSource.GITHUB }],
+        trend: {
+          activity: 1,
+          recentActivity: 1,
+          previousActivity: 0,
+          sourceDiversity: 1 / 3,
+          freshness: 1,
+        },
+      })
     })
   })
 })
