@@ -19,6 +19,7 @@ export type {
   TopicQuery,
   TopicSummary,
   TopicDetail,
+  TopicDetailTrend,
   TopicEvidence,
   TopicQueryService,
 } from './topic-query-service'

@@ -17,6 +17,14 @@ export interface TopicSummary {
   updatedAt: Date
 }
 
+export interface TopicDetailTrend {
+  activity: number
+  recentActivity: number
+  previousActivity: number
+  sourceDiversity: number
+  freshness: number
+}
+
 export interface TopicDetail {
   id: string
   name: string
@@ -26,6 +34,7 @@ export interface TopicDetail {
   rank: number | null
   updatedAt: Date
   evidence: TopicEvidence[]
+  trend: TopicDetailTrend
 }
 
 export interface TopicEvidence {

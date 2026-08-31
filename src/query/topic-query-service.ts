@@ -2,16 +2,18 @@ import type {
   TopicQuery,
   TopicSummary,
   TopicDetail,
+  TopicDetailTrend,
   TopicEvidence,
   TopicQueryService,
 } from '../interfaces/topic-query-service'
 import type { QueryResult } from '../interfaces/query-service'
-import type { EventSource } from '../types'
+import { EventSource } from '../types'
 import { SQLiteClient } from '../storage/sqlite/sqlite-client'
 
 const DEFAULT_LIMIT = 50
 const TRENDING_DEFAULT_LIMIT = 10
 const TRENDING_MAX_LIMIT = 100
+const DAY_MS = 24 * 60 * 60 * 1000
 
 interface TopicRow {
   id: string
@@ -22,9 +24,10 @@ interface TopicRow {
   updated_at: string
 }
 
-interface EvidenceRow {
+interface EvidenceWithEventRow {
   event_id: string
   source: string
+  created_at: string | null
 }
 
 export class SQLiteTopicQueryService implements TopicQueryService {
@@ -62,14 +65,21 @@ export class SQLiteTopicQueryService implements TopicQueryService {
     const row = this.client.queryOne<TopicRow>('SELECT * FROM topics WHERE id = ?', [id])
     if (!row) return null
 
-    const evidenceRows = this.client.query<EvidenceRow>(
-      'SELECT event_id, source FROM topic_evidence WHERE topic_id = ?',
+    const evidenceRows = this.client.query<EvidenceWithEventRow>(
+      `SELECT te.event_id, te.source, e.created_at
+       FROM topic_evidence te
+       LEFT JOIN events e ON te.event_id = e.id
+       WHERE te.topic_id = ?`,
       [id],
     )
+
+    const updatedAtTime = new Date(row.updated_at).getTime()
+    const trend = computeTopicDetailTrend(evidenceRows, updatedAtTime)
 
     return {
       ...mapTopicSummary(row),
       evidence: evidenceRows.map(mapEvidenceRow),
+      trend,
     }
   }
 
@@ -114,9 +124,45 @@ function mapTopicSummary(row: TopicRow): TopicSummary {
   }
 }
 
-function mapEvidenceRow(row: EvidenceRow): TopicEvidence {
+function mapEvidenceRow(row: EvidenceWithEventRow): TopicEvidence {
   return {
     eventId: row.event_id,
     source: row.source as EventSource,
+  }
+}
+
+function computeTopicDetailTrend(
+  evidenceRows: EvidenceWithEventRow[],
+  updatedAtTime: number,
+): TopicDetailTrend {
+  const activity = evidenceRows.length
+  let recentActivity = 0
+  let previousActivity = 0
+  const sources = new Set<string>()
+
+  for (const row of evidenceRows) {
+    sources.add(row.source)
+    if (row.created_at) {
+      const time = new Date(row.created_at).getTime()
+      if (!isNaN(time)) {
+        if (time >= updatedAtTime - 7 * DAY_MS && time <= updatedAtTime) {
+          recentActivity++
+        } else if (time >= updatedAtTime - 14 * DAY_MS && time < updatedAtTime - 7 * DAY_MS) {
+          previousActivity++
+        }
+      }
+    }
+  }
+
+  const supportedSources = Object.values(EventSource).length
+  const sourceDiversity = supportedSources > 0 ? sources.size / supportedSources : 0
+  const freshness = activity > 0 ? recentActivity / activity : 0
+
+  return {
+    activity,
+    recentActivity,
+    previousActivity,
+    sourceDiversity,
+    freshness,
   }
 }

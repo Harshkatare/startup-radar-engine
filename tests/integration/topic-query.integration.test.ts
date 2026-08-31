@@ -42,18 +42,22 @@ describe('Topic Query Integration', () => {
     client.close()
   })
 
-  function insertStubEvent(id: string, source: EventSource): void {
+  function insertStubEvent(id: string, source: EventSource, createdAt?: string): void {
     client.execute(
       `INSERT OR IGNORE INTO events (id, source, external_id, title, content, metadata, created_at)
-       VALUES (?, ?, ?, 'Stub Event', '', '{}', datetime('now'))`,
-      [id, source, id],
+       VALUES (?, ?, ?, 'Stub Event', '', '{}', ?)`,
+      [id, source, id, createdAt ?? new Date().toISOString()],
     )
   }
 
-  async function seed(topics: Topic[], evidence: Record<string, TopicEvidence[]>): Promise<void> {
+  async function seed(
+    topics: Topic[],
+    evidence: Record<string, TopicEvidence[]>,
+    eventDates: Record<string, string> = {},
+  ): Promise<void> {
     for (const items of Object.values(evidence)) {
       for (const item of items) {
-        insertStubEvent(item.eventId, item.source)
+        insertStubEvent(item.eventId, item.source, eventDates[item.eventId])
       }
     }
     await repository.saveMany(topics)
@@ -154,7 +158,7 @@ describe('Topic Query Integration', () => {
   })
 
   describe('findById', () => {
-    it('returns the persisted topic with evidence', async () => {
+    it('returns the persisted topic with evidence and trend metrics', async () => {
       await seed(
         [makeTopic('topic-1', 1, 0.5, 0.5)],
         {
@@ -162,6 +166,10 @@ describe('Topic Query Integration', () => {
             { eventId: 'event-1', source: EventSource.GITHUB },
             { eventId: 'event-2', source: EventSource.REDDIT },
           ],
+        },
+        {
+          'event-1': '2026-06-12T00:00:00.000Z', // 3 days before updatedAt -> recent
+          'event-2': '2026-06-05T00:00:00.000Z', // 10 days before updatedAt -> previous
         },
       )
 
@@ -176,18 +184,32 @@ describe('Topic Query Integration', () => {
         { eventId: 'event-1', source: EventSource.GITHUB },
         { eventId: 'event-2', source: EventSource.REDDIT },
       ])
+      expect(detail?.trend).toEqual({
+        activity: 2,
+        recentActivity: 1,
+        previousActivity: 1,
+        sourceDiversity: 2 / 3,
+        freshness: 0.5,
+      })
     })
 
     it('returns null for a missing topic', async () => {
       expect(await queryService.findById('does-not-exist')).toBeNull()
     })
 
-    it('returns empty evidence for a topic without evidence', async () => {
+    it('returns empty evidence and zeroed trend for a topic without evidence', async () => {
       await repository.saveMany([makeTopic('topic-1', 1, 0.5, 0.5)])
 
       const detail = await queryService.findById('topic-1')
 
       expect(detail?.evidence).toEqual([])
+      expect(detail?.trend).toEqual({
+        activity: 0,
+        recentActivity: 0,
+        previousActivity: 0,
+        sourceDiversity: 0,
+        freshness: 0,
+      })
     })
   })
 
