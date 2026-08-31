@@ -22,6 +22,9 @@ import { EventController } from '../controllers/event-controller'
 import { ProcessingController } from '../controllers/processing-controller'
 import { DashboardController } from '../controllers/dashboard-controller'
 import { TopicController } from '../controllers/topic-controller'
+import { DeterministicAnalystProvider } from '../analysis/deterministic-analyst-provider'
+import { AIAnalystService } from '../analysis/ai-analyst'
+import type { AIAnalyst } from '../interfaces/ai-analyst'
 import { ProcessingLock } from '../scheduler/processing-lock'
 import { SchedulerService } from '../scheduler/scheduler-service'
 import { Scheduler } from '../scheduler/scheduler'
@@ -35,6 +38,7 @@ export interface Dependencies {
   processingController: ProcessingController
   dashboardController: DashboardController
   topicController: TopicController
+  aiAnalyst: AIAnalyst
   scheduler: Scheduler
 }
 
@@ -73,7 +77,9 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
   const eventController = new EventController(queryService)
   const processingController = new ProcessingController(processingService, lock, schedulerService)
   const dashboardController = new DashboardController(dashboardService)
-  const topicController = new TopicController(topicQueryService)
+  const analystProvider = new DeterministicAnalystProvider()
+  const aiAnalyst = new AIAnalystService(analystProvider)
+  const topicController = new TopicController(topicQueryService, aiAnalyst)
 
   return {
     client: resolved,
@@ -84,6 +90,7 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
     processingController,
     dashboardController,
     topicController,
+    aiAnalyst,
     scheduler,
   }
 }

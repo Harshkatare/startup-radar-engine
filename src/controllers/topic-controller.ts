@@ -1,10 +1,15 @@
 import type { Request, Response, NextFunction } from 'express'
 import type { TopicQueryService } from '../interfaces/topic-query-service'
+import type { AIAnalyst } from '../interfaces/ai-analyst'
+import type { AnalystInput } from '../analysis/analyst-input'
 
 const DEFAULT_LIMIT = 50
 
 export class TopicController {
-  constructor(private readonly topicQueryService: TopicQueryService) {}
+  constructor(
+    private readonly topicQueryService: TopicQueryService,
+    private readonly aiAnalyst: AIAnalyst,
+  ) {}
 
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -62,6 +67,36 @@ export class TopicController {
       }
 
       res.json(await this.topicQueryService.findTrending(limit))
+    } catch (err) {
+      next(err)
+    }
+  }
+
+  async analysis(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const topic = await this.topicQueryService.findById(req.params.id as string)
+
+      if (!topic) {
+        res.status(404).json({ error: 'Not Found' })
+        return
+      }
+
+      const input: AnalystInput = {
+        topic: {
+          id: topic.id,
+          name: topic.name,
+          score: topic.score,
+          growthRate: topic.growthRate,
+          confidence: topic.confidence,
+        },
+        rank: topic.rank,
+        evidence: topic.evidence,
+        trend: topic.trend,
+      }
+
+      const result = await this.aiAnalyst.analyze(input)
+
+      res.json(result)
     } catch (err) {
       next(err)
     }
