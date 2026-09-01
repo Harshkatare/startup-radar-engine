@@ -23,11 +23,18 @@ import { ProcessingController } from '../controllers/processing-controller'
 import { DashboardController } from '../controllers/dashboard-controller'
 import { TopicController } from '../controllers/topic-controller'
 import { DeterministicAnalystProvider } from '../analysis/deterministic-analyst-provider'
+import { GroqAnalystProvider } from '../analysis/groq-analyst-provider'
 import { AIAnalystService } from '../analysis/ai-analyst'
+import type { AnalystProvider } from '../analysis/analyst-provider'
 import type { AIAnalyst } from '../interfaces/ai-analyst'
 import { ProcessingLock } from '../scheduler/processing-lock'
 import { SchedulerService } from '../scheduler/scheduler-service'
 import { Scheduler } from '../scheduler/scheduler'
+
+export interface DependencyOptions {
+  client?: SQLiteClient
+  analystProvider?: AnalystProvider
+}
 
 export interface Dependencies {
   client: SQLiteClient
@@ -42,8 +49,21 @@ export interface Dependencies {
   scheduler: Scheduler
 }
 
-export function createDependencies(client?: SQLiteClient): Dependencies {
-  const resolved = client ?? (() => { const c = new SQLiteClient(); c.open(); return c })()
+export function createDependencies(
+  clientOrOptions?: SQLiteClient | DependencyOptions,
+): Dependencies {
+  const options: DependencyOptions =
+    clientOrOptions instanceof SQLiteClient
+      ? { client: clientOrOptions }
+      : clientOrOptions ?? {}
+
+  const resolved =
+    options.client ??
+    (() => {
+      const c = new SQLiteClient()
+      c.open()
+      return c
+    })()
 
   const storage = new SQLiteStorage(resolved)
   storage.runMigrations()
@@ -53,9 +73,9 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
   const topicQueryService = new SQLiteTopicQueryService(resolved)
 
   const pipeline = new ProcessingPipeline([
-  storage,
-  new TopicPersistenceService(new SQLiteTopicRepository(resolved)),
-])
+    storage,
+    new TopicPersistenceService(new SQLiteTopicRepository(resolved)),
+  ])
   pipeline.register(new CleaningProcessor())
   pipeline.register(new ClassificationProcessor())
   pipeline.register(new AggregationProcessor())
@@ -77,7 +97,19 @@ export function createDependencies(client?: SQLiteClient): Dependencies {
   const eventController = new EventController(queryService)
   const processingController = new ProcessingController(processingService, lock, schedulerService)
   const dashboardController = new DashboardController(dashboardService)
-  const analystProvider = new DeterministicAnalystProvider()
+
+  let analystProvider: AnalystProvider
+  if (options.analystProvider) {
+    analystProvider = options.analystProvider
+  } else if (process.env.GROQ_API_KEY) {
+    analystProvider = new GroqAnalystProvider({
+      apiKey: process.env.GROQ_API_KEY,
+      model: process.env.GROQ_MODEL,
+    })
+  } else {
+    analystProvider = new DeterministicAnalystProvider()
+  }
+
   const aiAnalyst = new AIAnalystService(analystProvider)
   const topicController = new TopicController(topicQueryService, aiAnalyst)
 
