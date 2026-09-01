@@ -13,6 +13,7 @@ import type { Topic } from '../../src/types'
 import type { TopicEvidence } from '../../src/interfaces/topic-query-service'
 import type { TopicQueryService } from '../../src/interfaces/topic-query-service'
 import type { AIAnalyst } from '../../src/interfaces/ai-analyst'
+import { GroqAnalystProvider } from '../../src/analysis/groq-analyst-provider'
 
 function makeTopic(id: string, score: number, growthRate: number, confidence: number): Topic {
   return {
@@ -461,6 +462,61 @@ describe('Topics API', () => {
           freshness: 1,
         },
       })
+    })
+
+    it('executes full topic analysis through GroqAnalystProvider without real network requests', async () => {
+      await seed([
+        {
+          id: 'topic-groq-test',
+          name: 'vector-dbs',
+          score: 0.95,
+          growthRate: 0.8,
+          confidence: 0.85,
+          updatedAt: new Date('2026-06-15T00:00:00.000Z'),
+        },
+      ])
+
+      const mockGroqClient = {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      summary: 'Vector databases are surging in developer adoption.',
+                      whyItMatters: 'Critical vector retrieval infrastructure for LLMs.',
+                      evidenceSummary: 'Demonstrated momentum across GitHub and Reddit.',
+                    }),
+                  },
+                },
+              ],
+            }),
+          },
+        },
+      } as any
+
+      const groqProvider = new GroqAnalystProvider({
+        client: mockGroqClient,
+        model: 'llama-3.3-70b-versatile',
+      })
+
+      const customDeps = createDependencies({
+        client,
+        analystProvider: groqProvider,
+      })
+      const customApp = createApp(customDeps)
+
+      const res = await request(customApp).get('/topics/topic-groq-test/analysis')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({
+        topicId: 'topic-groq-test',
+        summary: 'Vector databases are surging in developer adoption.',
+        whyItMatters: 'Critical vector retrieval infrastructure for LLMs.',
+        evidenceSummary: 'Demonstrated momentum across GitHub and Reddit.',
+      })
+      expect(mockGroqClient.chat.completions.create).toHaveBeenCalledTimes(1)
     })
   })
 })
