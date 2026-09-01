@@ -6,3 +6,6 @@ dist/
 *.db-shm
 eng/
 AGENTS.md
+.env
+.env.*
+.env.local
