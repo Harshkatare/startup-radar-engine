@@ -18,13 +18,6 @@ export class MemoryTopicRepository implements TopicRepository {
     return this.topics.get(id) ?? null
   }
 
-  async findByName(name: string): Promise<Topic | null> {
-    for (const topic of this.topics.values()) {
-      if (topic.name === name) return topic
-    }
-    return null
-  }
-
   async findAll(): Promise<Topic[]> {
     return Array.from(this.topics.values())
   }

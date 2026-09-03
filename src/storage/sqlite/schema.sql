@@ -33,3 +33,19 @@ CREATE TABLE IF NOT EXISTS processing_results (
   data TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS topics (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  score REAL NOT NULL,
+  growth_rate REAL NOT NULL,
+  confidence REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS topic_evidence (
+  topic_id TEXT NOT NULL REFERENCES topics(id),
+  event_id TEXT NOT NULL REFERENCES events(id),
+  source TEXT NOT NULL,
+  PRIMARY KEY (topic_id, event_id)
+);

@@ -6,13 +6,15 @@
     "build": "tsc",
     "start": "node dist/api/server.js",
     "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:api": "vitest run tests/api",
     "test:e2e": "vitest run tests/e2e"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.1",
-    "express": "^5.2.1"
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1",
+    "groq-sdk": "^1.6.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

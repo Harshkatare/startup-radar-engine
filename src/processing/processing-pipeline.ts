@@ -5,7 +5,11 @@ import type { ProcessingContext } from './processing-context'
 export class ProcessingPipeline {
   private processors: Processor[] = []
 
-  constructor(private readonly persister?: Persister) {}
+  constructor(persister?: Persister | Persister[]) {
+    this.persisters = persister ? (Array.isArray(persister) ? persister : [persister]) : []
+  }
+
+  private readonly persisters: Persister[]
 
   register(processor: Processor): void {
     this.processors.push(processor)
@@ -18,8 +22,8 @@ export class ProcessingPipeline {
       result = await processor.process(result)
     }
 
-    if (this.persister) {
-      await this.persister.persist(result)
+    for (const persister of this.persisters) {
+      await persister.persist(result)
     }
 
     return result

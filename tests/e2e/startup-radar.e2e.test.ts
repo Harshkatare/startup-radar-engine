@@ -12,6 +12,9 @@ import { createProcessingStatistics } from '../../src/processing/processing-stat
 import { createClassificationResult } from '../../src/processing/classification/classification-result'
 import { createAggregationResult } from '../../src/processing/aggregation/aggregation-result'
 import { createScoreResult } from '../../src/processing/scoring/score-result'
+import { createTopicResult } from '../../src/processing/topics/topic-result'
+import { createTrendResult } from '../../src/processing/trends/trend-result'
+import { createRankingResult } from '../../src/processing/ranking/ranking-result'
 import { EventSource } from '../../src/types'
 import type { Dependencies } from '../../src/bootstrap/dependencies'
 import type { ProcessingContext } from '../../src/processing/processing-context'
@@ -58,6 +61,9 @@ describe('Startup Radar E2E', () => {
       classification: createClassificationResult(),
       aggregation: createAggregationResult(),
       score: createScoreResult(),
+      topics: createTopicResult(),
+      trends: createTrendResult(),
+      ranking: createRankingResult(),
     }
 
     await pipeline.run(context)

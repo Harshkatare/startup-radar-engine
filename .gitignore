@@ -4,3 +4,8 @@ dist/
 *.db-journal
 *.db-wal
 *.db-shm
+eng/
+AGENTS.md
+.env
+.env.*
+.env.local
