@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { GroqAnalystProvider } from '../../src/analysis/groq-analyst-provider'
 import type { AnalystInput } from '../../src/analysis/analyst-input'
 import { EventSource } from '../../src/types/enums'
@@ -30,16 +30,16 @@ function createSampleInput(overrides: Partial<AnalystInput> = {}): AnalystInput 
 }
 
 describe('GroqAnalystProvider (Unit Tests)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('throws a configuration error if instantiated without an API key or client', () => {
-    const origKey = process.env.GROQ_API_KEY
-    delete process.env.GROQ_API_KEY
-    try {
-      expect(() => new GroqAnalystProvider()).toThrow(
-        'GroqAnalystProvider requires an API key (GROQ_API_KEY)',
-      )
-    } finally {
-      if (origKey) process.env.GROQ_API_KEY = origKey
-    }
+    vi.stubEnv('GROQ_API_KEY', '')
+
+    expect(() => new GroqAnalystProvider()).toThrow(
+      'GroqAnalystProvider requires an API key (GROQ_API_KEY)',
+    )
   })
 
   it('transforms AnalystInput into the expected chat completion request with strict grounding prompts', async () => {
