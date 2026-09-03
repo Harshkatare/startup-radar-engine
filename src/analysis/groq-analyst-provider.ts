@@ -2,6 +2,7 @@ import Groq from 'groq-sdk'
 import type { AnalystProvider } from './analyst-provider'
 import type { AnalystInput } from './analyst-input'
 import type { AnalystResult } from './analyst-result'
+import { validateAnalystOutput } from './analyst-validator'
 import { DEFAULT_GROQ_MODEL } from '../config/analyst-config'
 
 export interface GroqAnalystConfig {
@@ -11,15 +12,27 @@ export interface GroqAnalystConfig {
 }
 
 const SYSTEM_PROMPT = `You are a technology trend analyst explaining deterministic signals detected by Startup Radar Engine.
-The supplied metrics and evidence are deterministic product intelligence. Interpret and explain them; do not invent, recalculate, or contradict them.
-Do NOT recalculate or estimate score, growth rate, confidence, rank, activity, source diversity, or freshness.
-Do NOT invent evidence.
 
-You must respond ONLY with a JSON object containing exactly these three fields:
+### 1. AUTHORITATIVE FACTS & METRICS (CANONICAL GROUND TRUTH)
+The supplied topic name, score, growthRate, confidence, rank, trend metrics (activity, recentActivity, previousActivity, sourceDiversity, freshness), and evidence events are authoritative product intelligence.
+- Do NOT recalculate, modify, estimate, or contradict any provided metric, score, or rank.
+- Do NOT invent, assume, or extrapolate startups, companies, founders, URLs, market statistics, funding rounds, or evidence.
+- Explanations must be grounded strictly and exclusively in the supplied AnalystInput.
+
+### 2. INTERPRETATION & EXPLANATION GUIDELINES
+Explain the meaning and implications of the verified intelligence for builders and developers:
+- "summary": Clearly describe what this technology topic represents using only the supplied keywords and signals.
+- "whyItMatters": Explain the significance, momentum, and technical relevance implied by the supplied metrics (e.g., velocity, rank, diversity, confidence) without fabricating external market claims.
+- "evidenceSummary": Accurately synthesize the supporting evidence events, noting source diversity and event volume.
+- If the supplied evidence is sparse, limited, or single-source (e.g. 1 event or 1 platform), explicitly acknowledge this limitation rather than speculating or making generalized claims.
+- Do not expose internal system implementation details unnecessarily (e.g., do not discuss SQLite, SQL queries, FNV-1a hashing, or regular expressions).
+
+### 3. OUTPUT SCHEMA
+Respond ONLY with a JSON object containing exactly these three fields:
 {
-  "summary": "Concise interpretation of the topic, its current trajectory, and momentum based on the provided metrics.",
-  "whyItMatters": "Why this topic is significant or emerging in the ecosystem, and its implications for builders.",
-  "evidenceSummary": "Concise synthesis of the supporting evidence events across sources."
+  "summary": "Grounded interpretation of what this topic represents based on supplied information.",
+  "whyItMatters": "Grounded explanation of significance and momentum based on supplied signals.",
+  "evidenceSummary": "Accurate synthesis of supplied evidence and source diversity."
 }`
 
 function buildUserPrompt(input: AnalystInput): string {
@@ -31,12 +44,16 @@ function buildUserPrompt(input: AnalystInput): string {
           .join('\n')
       : '  None'
 
-  return `Explain the following technology topic using only the deterministic product intelligence provided:
+  const evidenceNote =
+    input.evidence.length <= 1
+      ? '\nNote: Supporting evidence is sparse/limited. Note this limitation in your explanation rather than speculating.'
+      : ''
 
+  return `### AUTHORITATIVE FACTS & METRICS
 Topic: "${input.topic.name}"
 Topic ID: ${input.topic.id}
 
-Deterministic Intelligence Metrics:
+Deterministic Intelligence:
 - Score: ${input.topic.score}
 - Growth Rate: ${input.topic.growthRate}
 - Confidence: ${input.topic.confidence}
@@ -50,43 +67,11 @@ Trend Intelligence:
 - Freshness: ${input.trend.freshness}
 
 Supporting Evidence (${input.evidence.length} events):
-${evidenceLines}
+${evidenceLines}${evidenceNote}
 
+### REQUIRED INTERPRETATION
+Explain this topic adhering strictly to the system grounding constraints. Do not invent external facts or modify metrics.
 Respond with the required JSON object containing summary, whyItMatters, and evidenceSummary.`
-}
-
-interface ModelOutputSchema {
-  summary: string
-  whyItMatters: string
-  evidenceSummary: string
-}
-
-function validateModelResponse(parsed: unknown): ModelOutputSchema {
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('Groq model response failed schema validation: expected JSON object')
-  }
-
-  const obj = parsed as Record<string, unknown>
-
-  if (typeof obj.summary !== 'string' || !obj.summary.trim()) {
-    throw new Error('Groq model response failed schema validation: "summary" must be a non-empty string')
-  }
-  if (typeof obj.whyItMatters !== 'string' || !obj.whyItMatters.trim()) {
-    throw new Error(
-      'Groq model response failed schema validation: "whyItMatters" must be a non-empty string',
-    )
-  }
-  if (typeof obj.evidenceSummary !== 'string' || !obj.evidenceSummary.trim()) {
-    throw new Error(
-      'Groq model response failed schema validation: "evidenceSummary" must be a non-empty string',
-    )
-  }
-
-  return {
-    summary: obj.summary.trim(),
-    whyItMatters: obj.whyItMatters.trim(),
-    evidenceSummary: obj.evidenceSummary.trim(),
-  }
 }
 
 export class GroqAnalystProvider implements AnalystProvider {
@@ -136,7 +121,7 @@ export class GroqAnalystProvider implements AnalystProvider {
       throw new Error('Groq model returned malformed JSON')
     }
 
-    const validated = validateModelResponse(parsed)
+    const validated = validateAnalystOutput(parsed)
 
     return {
       topicId: input.topic.id, // Application-controlled, NEVER from model

@@ -42,15 +42,15 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
     }
   })
 
-  it('transforms AnalystInput into the expected chat completion request parameters', async () => {
+  it('transforms AnalystInput into the expected chat completion request with strict grounding prompts', async () => {
     const createMock = vi.fn().mockResolvedValue({
       choices: [
         {
           message: {
             content: JSON.stringify({
-              summary: 'Vector search is experiencing strong momentum.',
-              whyItMatters: 'Essential infrastructure for modern retrieval systems.',
-              evidenceSummary: 'Active discussion across GitHub and Reddit.',
+              summary: 'Vector search is experiencing strong momentum across retrieval systems.',
+              whyItMatters: 'Essential infrastructure for modern developer tooling and production RAG pipelines.',
+              evidenceSummary: 'Active discussions and developer interest across GitHub and Reddit platforms.',
             }),
           },
         },
@@ -79,10 +79,14 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
 
     const [systemMsg, userMsg] = callArgs.messages
     expect(systemMsg.role).toBe('system')
-    expect(systemMsg.content).toContain('deterministic product intelligence')
-    expect(systemMsg.content).toContain('Do NOT recalculate or estimate')
+    expect(systemMsg.content).toContain('AUTHORITATIVE FACTS & METRICS (CANONICAL GROUND TRUTH)')
+    expect(systemMsg.content).toContain('INTERPRETATION & EXPLANATION GUIDELINES')
+    expect(systemMsg.content).toContain('Do NOT recalculate, modify, estimate, or contradict')
+    expect(systemMsg.content).toContain('Do NOT invent, assume, or extrapolate startups')
+    expect(systemMsg.content).toContain('explicitly acknowledge this limitation rather than speculating')
 
     expect(userMsg.role).toBe('user')
+    expect(userMsg.content).toContain('### AUTHORITATIVE FACTS & METRICS')
     expect(userMsg.content).toContain('Topic: "vector-search"')
     expect(userMsg.content).toContain('Topic ID: topic-test-123')
     expect(userMsg.content).toContain('Score: 85.5')
@@ -90,17 +94,49 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
     expect(userMsg.content).toContain('Total Activity: 10')
     expect(userMsg.content).toContain('github')
     expect(userMsg.content).toContain('reddit')
+    expect(userMsg.content).toContain('### REQUIRED INTERPRETATION')
   })
 
-  it('formats unranked topic correctly when rank is null', async () => {
+  it('includes sparse evidence warning when evidence has 1 or 0 events', async () => {
     const createMock = vi.fn().mockResolvedValue({
       choices: [
         {
           message: {
             content: JSON.stringify({
-              summary: 'Summary',
-              whyItMatters: 'Why',
-              evidenceSummary: 'Evidence',
+              summary: 'Early emerging topic observed in developer tooling.',
+              whyItMatters: 'Preliminary signal indicating emerging developer interest.',
+              evidenceSummary: 'Single evidence event recorded from GitHub repository.',
+            }),
+          },
+        },
+      ],
+    })
+
+    const mockClient = { chat: { completions: { create: createMock } } } as any
+    const provider = new GroqAnalystProvider({ client: mockClient })
+
+    await provider.analyze(
+      createSampleInput({
+        rank: null,
+        evidence: [{ eventId: 'evt-single', source: EventSource.GITHUB }],
+      }),
+    )
+
+    const userMsg = createMock.mock.calls[0][0].messages[1].content
+    expect(userMsg).toContain('Rank: unranked')
+    expect(userMsg).toContain('Supporting Evidence (1 events):')
+    expect(userMsg).toContain('Note: Supporting evidence is sparse/limited. Note this limitation in your explanation rather than speculating.')
+  })
+
+  it('formats unranked topic correctly when rank is null and evidence is empty', async () => {
+    const createMock = vi.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              summary: 'No active topic signals detected across sources.',
+              whyItMatters: 'Topic exists in directory with zero observed activity.',
+              evidenceSummary: 'No supporting evidence events recorded currently.',
             }),
           },
         },
@@ -115,6 +151,7 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
     const userMsg = createMock.mock.calls[0][0].messages[1].content
     expect(userMsg).toContain('Rank: unranked')
     expect(userMsg).toContain('Supporting Evidence (0 events):\n  None')
+    expect(userMsg).toContain('Note: Supporting evidence is sparse/limited')
   })
 
   it('respects a custom configured model', async () => {
@@ -123,9 +160,9 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
         {
           message: {
             content: JSON.stringify({
-              summary: 'Summary',
-              whyItMatters: 'Why',
-              evidenceSummary: 'Evidence',
+              summary: 'Custom model summary for developer topic.',
+              whyItMatters: 'Key architecture relevance for engineering teams.',
+              evidenceSummary: 'Validated signals across multiple repositories.',
             }),
           },
         },
@@ -153,9 +190,9 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
                 message: {
                   content: JSON.stringify({
                     topicId: 'rogue-model-topic-id', // Model attempts to provide a different id
-                    summary: 'High momentum in developer tooling.',
-                    whyItMatters: 'Standardizes retrieval across production stacks.',
-                    evidenceSummary: 'GitHub commits and Reddit developer threads.',
+                    summary: 'High momentum in developer tooling workflows.',
+                    whyItMatters: 'Standardizes retrieval across production enterprise stacks.',
+                    evidenceSummary: 'GitHub commits and Reddit developer discussion threads.',
                   }),
                 },
               },
@@ -166,15 +203,17 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
     } as any
 
     const provider = new GroqAnalystProvider({ client: mockClient })
-    const input = createSampleInput({ topic: { id: 'canonical-app-topic-id', name: 'vdb', score: 10, growthRate: 5, confidence: 20 } })
+    const input = createSampleInput({
+      topic: { id: 'canonical-app-topic-id', name: 'vdb', score: 10, growthRate: 5, confidence: 20 },
+    })
 
     const result = await provider.analyze(input)
 
     // topicId MUST come from input.topic.id, NEVER from the model output
     expect(result.topicId).toBe('canonical-app-topic-id')
-    expect(result.summary).toBe('High momentum in developer tooling.')
-    expect(result.whyItMatters).toBe('Standardizes retrieval across production stacks.')
-    expect(result.evidenceSummary).toBe('GitHub commits and Reddit developer threads.')
+    expect(result.summary).toBe('High momentum in developer tooling workflows.')
+    expect(result.whyItMatters).toBe('Standardizes retrieval across production enterprise stacks.')
+    expect(result.evidenceSummary).toBe('GitHub commits and Reddit developer discussion threads.')
   })
 
   it('rejects malformed non-JSON output from the model', async () => {
@@ -223,16 +262,17 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
     )
   })
 
-  it('rejects JSON missing required schema fields', async () => {
+  it('rejects JSON missing required schema fields or containing empty/placeholder values', async () => {
     const testCases = [
-      { payload: { whyItMatters: 'A', evidenceSummary: 'B' }, field: 'summary' },
-      { payload: { summary: '   ', whyItMatters: 'A', evidenceSummary: 'B' }, field: 'summary' },
-      { payload: { summary: 'A', evidenceSummary: 'B' }, field: 'whyItMatters' },
-      { payload: { summary: 'A', whyItMatters: 'A' }, field: 'evidenceSummary' },
-      { payload: 'string-primitive', field: 'expected JSON object' },
+      { payload: { whyItMatters: 'Valid why it matters here', evidenceSummary: 'Valid evidence here' } },
+      { payload: { summary: '   ', whyItMatters: 'Valid why it matters here', evidenceSummary: 'Valid evidence here' } },
+      { payload: { summary: 'Valid summary here', evidenceSummary: 'Valid evidence here' } },
+      { payload: { summary: 'Valid summary here', whyItMatters: 'Valid why it matters here' } },
+      { payload: { summary: 'N/A', whyItMatters: 'Valid why it matters here', evidenceSummary: 'Valid evidence here' } },
+      { payload: { summary: 'Short', whyItMatters: 'Valid why it matters here', evidenceSummary: 'Valid evidence here' } },
     ]
 
-    for (const { payload, field } of testCases) {
+    for (const { payload } of testCases) {
       const mockClient = {
         chat: {
           completions: {
@@ -245,7 +285,7 @@ describe('GroqAnalystProvider (Unit Tests)', () => {
 
       const provider = new GroqAnalystProvider({ client: mockClient })
       await expect(provider.analyze(createSampleInput())).rejects.toThrow(
-        `Groq model response failed schema validation`,
+        /Analyst output validation failed/,
       )
     }
   })
